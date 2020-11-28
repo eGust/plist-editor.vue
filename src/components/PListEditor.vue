@@ -1,5 +1,5 @@
 <template>
-  <div class="plist-editor container">
+  <div class="plist-editor">
     <div class="row header">
       <label class="key">Key</label>
       <label class="type">Type</label>
@@ -16,7 +16,7 @@
     </div>
 
     <button
-      v-if="downloadable"
+      v-if="download"
       class="btn"
       @click="onDownload"
     >
@@ -27,7 +27,7 @@
       <a
         ref="refDownload"
         :href="data.urlConfigPlist"
-        download="config.plist"
+        :download="downloadFilename"
       >
         Download
       </a>
@@ -45,6 +45,7 @@ import PListNodeItem from './PListNodeItem.vue';
 
 import { encodePList, PListRootNode } from '/@lib/plist';
 import { sleep } from '/@lib/utils';
+import { PListEditorData } from './types';
 
 export default defineComponent({
   name: 'PListEditor',
@@ -55,7 +56,10 @@ export default defineComponent({
       required: true,
     },
     editable: Boolean,
-    downloadable: Boolean,
+    download: {
+      type: [Boolean, String],
+      default: false,
+    },
   },
 
   setup(props) {
@@ -63,15 +67,24 @@ export default defineComponent({
       urlConfigPlist: '',
     });
 
-    provide('plistEditable', props.editable || false);
+    provide<PListEditorData>('plistEditorData', reactive({
+      editable: props.editable || false,
+      expanded: new Map(),
+    }));
 
     const refDownload = ref<HTMLAnchorElement | null>(null);
 
     const plistRoot = toRef(props, 'plist');
 
+    const downloadFilename = computed(() => {
+      if (!props.download) return false;
+      if (props.download === true) return '*.plist';
+      return props.download;
+    });
+
     const items = computed(() => Object.entries(plistRoot.value.value)
       .map(([name, node]) => ({
-        key: node._id, // eslint-disable-line no-underscore-dangle
+        key: node.id,
         parent: plistRoot.value,
         keyName: name,
       })));
@@ -83,9 +96,8 @@ export default defineComponent({
       }
 
       const plist = encodePList(props.plist);
-      console.log(plist);
       if (process.env.NODE_ENV === 'development') {
-        // return;
+        console.debug(plist);
       }
 
       const blob = new Blob([plist], { type: 'octet/stream' });
@@ -101,9 +113,40 @@ export default defineComponent({
     return {
       data,
       items,
+      downloadFilename,
       refDownload,
       onDownload,
     };
   },
 });
 </script>
+
+<style lang="stylus">
+.plist-editor
+  @apply w-full
+  .header
+    @apply sticky top-0 text-center font-semibold mt-1
+
+  .items
+    @apply font-mono text-sm mb-2
+    .row > span:not(:first-child)
+      @apply border-l border-gray-200
+    select
+      @apply w-full
+
+  .row
+    @apply grid grid-cols-12 border-b border-gray-300
+    & > span, & > label
+      @apply px-2 py-1
+    .type
+      @apply col-span-2 cursor-default
+    .key, .value
+      @apply col-span-5
+
+  .items .row > .key
+    @apply flex flex-row items-stretch
+    & > *
+      @apply flex-grow-0 flex-shrink-0
+    & > .dictionary
+      @apply flex-auto cursor-text
+</style>

@@ -1,6 +1,7 @@
 <template>
   <span
     class="wrap"
+    :class="{ readonly: !editable }"
     @dblclick="onStartEditing"
   >
     <slot
@@ -81,4 +82,7 @@ export default defineComponent({
 
   & > *
     @apply flex-auto
+
+  &.readonly
+    @apply cursor-default select-none
 </style>

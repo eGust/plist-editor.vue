@@ -2,7 +2,7 @@
   <DblClickEditor
     v-slot="{ show, stopEditing }"
     class="value number"
-    :text="node.value.toString()"
+    :text="text"
     :editable="editable"
     :editor="refEditor"
   >
@@ -10,7 +10,7 @@
       v-show="show"
       ref="refEditor"
       v-bind="inputAttrs"
-      :value="node.value"
+      :value="inputValue"
       @keydown.esc.stop="() => stopEditing()"
       @change="onChange"
     >
@@ -27,6 +27,16 @@ import DblClickEditor from './DblClickEditor.vue';
 
 import { PListDataType, PListDateNode, PListNumberNode } from '/@lib/plist';
 
+const LOCAL_DATE_ISO_FORMAT = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+const LOCAL_TIME_ISO_FORMAT = new Intl.DateTimeFormat('en-GB', {
+  hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+
+const toLocalDateISO = (date: Date): string => LOCAL_DATE_ISO_FORMAT.format(date).replace(/\//g, '-');
+
+const toLocalTimeISO = (time: Date): string => LOCAL_TIME_ISO_FORMAT.format(time);
+
 export default defineComponent({
   name: 'PListValueString',
   components: { DblClickEditor },
@@ -41,6 +51,35 @@ export default defineComponent({
   setup(props) {
     const refEditor = ref<HTMLInputElement | null>(null);
 
+    const text = computed(() => {
+      switch (props.node.type) {
+        case PListDataType.Number: {
+          const n = props.node.value;
+          return n.toString();
+        }
+        case PListDataType.Date: {
+          const dt = props.node.value;
+          return `${dt.toLocaleString()} (${dt.toISOString()})`;
+        }
+        default:
+          throw new Error(`Unknown type: ${(props.node as PListNumberNode).type}`);
+      }
+    });
+
+    const inputValue = computed(() => {
+      switch (props.node.type) {
+        case PListDataType.Number: {
+          return props.node.value.toString();
+        }
+        case PListDataType.Date: {
+          const dt = props.node.value;
+          return `${toLocalDateISO(dt)}T${toLocalTimeISO(dt)}`;
+        }
+        default:
+          throw new Error(`Unknown type: ${(props.node as PListNumberNode).type}`);
+      }
+    });
+
     const inputAttrs = computed(() => {
       switch (props.node.type) {
         case PListDataType.Number:
@@ -49,11 +88,13 @@ export default defineComponent({
           };
         case PListDataType.Date:
           return {
+            // https://developer.mozilla.org/docs/Web/HTML/Element/input/datetime-local#Browser_compatibility
+            // unsupported by desktop Firefox/Safari
             type: 'datetime-local',
             step: 1,
           };
         default:
-          throw Error(`Unknown type: ${(props.node as PListNumberNode).type}`);
+          throw new Error(`Unknown type: ${(props.node as PListNumberNode).type}`);
       }
     });
 
@@ -71,11 +112,17 @@ export default defineComponent({
           break;
         }
         default:
-          throw Error(`Unknown type: ${(props.node as PListNumberNode).type}`);
+          throw new Error(`Unknown type: ${(props.node as PListNumberNode).type}`);
       }
     };
 
-    return { refEditor, inputAttrs, onChange };
+    return {
+      refEditor,
+      text,
+      inputValue,
+      inputAttrs,
+      onChange,
+    };
   },
 });
 </script>

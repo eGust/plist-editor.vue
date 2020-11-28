@@ -12,7 +12,7 @@
     <PListEditor
       v-if="data.root"
       :plist="data.root"
-      downloadable
+      download="config.plist"
       editable
     />
   </main>

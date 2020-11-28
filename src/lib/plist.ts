@@ -11,7 +11,7 @@ export enum PListDataType {
 }
 
 interface WithInternalId {
-  _id: number;
+  id: number;
 }
 
 export type PListValueType = null
@@ -92,7 +92,7 @@ class IdAllocator {
   }
 
   public newItem<T>(x: T): T & WithInternalId {
-    return { ...x, _id: this.nextValue };
+    return { ...x, id: this.nextValue };
   }
 }
 
@@ -144,7 +144,7 @@ const parsePListValue = (value: Element, allocator: IdAllocator): PListNode => {
         value: parsePListDictValue(value, allocator), // eslint-disable-line no-use-before-define
       });
     default:
-      throw Error(`Unknown type: '${value.tagName}'`);
+      throw new Error(`Unknown type: '${value.tagName}'`);
   }
 };
 
@@ -175,7 +175,7 @@ export const parsePList = (plist: string): PListRootNode => {
       && root.getAttribute('version') === '1.0'
       && root.childElementCount === 1
       && root.children[0].tagName === 'dict')) {
-    throw Error('Invalid format');
+    throw new Error('Invalid format');
   }
 
   return parsePListDocument(root.children[0]);
@@ -248,7 +248,7 @@ const encodePListNode = (node: Omit<PListNode, keyof WithInternalId>, indent = 0
       ].join('\n');
     }
     default:
-      throw Error(`Unknown type ${node.type}`);
+      throw new Error(`Unknown type ${node.type}`);
   }
 };
 

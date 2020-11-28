@@ -8,8 +8,8 @@
         <IndentSpace :indent="indent" />
         <Caret
           v-if="hasChildren"
-          :to="statuses.collapsed ? 'right' : 'down'"
-          @click="statuses.collapsed = !statuses.collapsed"
+          :to="collapsed ? 'right' : 'down'"
+          @click="onToggleCollapsed"
         />
         <DblClickEditor
           v-slot="{ show, stopEditing }"
@@ -41,7 +41,7 @@
     </div>
 
     <div
-      v-if="hasChildren && !statuses.collapsed"
+      v-if="hasChildren && !collapsed"
       class="children"
     >
       <PListNodeItem
@@ -55,7 +55,7 @@
 
 <script lang="ts">
 import {
-  defineComponent, computed, PropType, inject, reactive, ref,
+  defineComponent, computed, PropType, inject, ref,
 } from 'vue';
 
 import { PListDataType, PListNode, PListDictNode } from '/@lib/plist';
@@ -68,10 +68,7 @@ import PListValueInput from './PListValueInput.vue';
 import PListValueBoolean from './PListValueBoolean.vue';
 import PListValueCount from './PListValueCount.vue';
 import PListValueText from './PListValueText.vue';
-
-interface Statuses {
-  collapsed: boolean;
-}
+import { PListEditorData } from './types';
 
 const VALUE_EDITORS = {
   PListValueInput,
@@ -116,15 +113,11 @@ export default defineComponent({
   },
 
   setup(props) {
-    const statuses = reactive<Statuses>({
-      collapsed: true,
-    });
-
     const refInputKey = ref<HTMLInputElement | null>(null);
 
-    const isEditable = inject('plistEditable', false);
+    const editor = inject<PListEditorData>('plistEditorData') as PListEditorData;
 
-    const isKeyEditable = computed(() => isEditable && props.parent.type === PListDataType.Dictionary);
+    const isKeyEditable = computed(() => editor.editable && props.parent.type === PListDataType.Dictionary);
 
     const node = computed(() => {
       switch (props.parent.type) {
@@ -135,9 +128,11 @@ export default defineComponent({
           return props.parent.value[props.keyName as string];
         }
         default:
-          throw Error(`Unsupported type ${props.parent.type}`);
+          throw new Error(`Unsupported type ${props.parent.type}`);
       }
     });
+
+    const collapsed = computed(() => !editor.expanded.get(node.value.id));
 
     const hasChildren = computed(() => {
       const { type } = node.value;
@@ -154,36 +149,44 @@ export default defineComponent({
       switch (node.value.type) {
         case PListDataType.Array: {
           return node.value.value.map((child, keyName) => ({
-            key: child._id, // eslint-disable-line no-underscore-dangle
+            key: child.id,
             keyName,
             ...binds,
           }));
         }
         case PListDataType.Dictionary: {
           return Object.entries(node.value.value).map(([keyName, child]) => ({
-            key: child._id, // eslint-disable-line no-underscore-dangle
+            key: child.id,
             keyName,
             ...binds,
           }));
         }
         default:
-          throw Error(`Invalid node to contain children: ${node.value.type}`);
+          throw new Error(`Invalid node to contain children: ${node.value.type}`);
       }
     });
 
     const editorType = computed(() => NODE_TYPE_EDITORS[node.value.type]);
 
+    const onToggleCollapsed = () => {
+      editor.expanded.set(node.value.id, collapsed.value);
+    };
+
     const onRenameKey = (oldKey: string, newKey: string) => {
-      const parent = (props.parent as PListDictNode);
-      const child = parent.value[oldKey];
-      delete parent.value[oldKey];
-      parent.value[newKey] = child;
+      if (oldKey === newKey) return;
+      const parentDict = (props.parent as PListDictNode).value;
+      if (newKey in parentDict) {
+        throw new Error(`Key "${newKey}" already exists`);
+      }
+
+      const child = parentDict[oldKey];
+      delete parentDict[oldKey];
+      parentDict[newKey] = child;
     };
 
     return {
-      statuses,
-
-      isEditable,
+      collapsed,
+      isEditable: editor.editable,
       isKeyEditable,
       hasChildren,
 
@@ -194,6 +197,7 @@ export default defineComponent({
       refInputKey,
 
       onRenameKey,
+      onToggleCollapsed,
     };
   },
 });
@@ -204,7 +208,9 @@ export default defineComponent({
   @apply bg-blue-50
   outline-style dotted
   & > .row
-    @apply bg-blue-300
+    @apply bg-blue-200
+    *::selection
+      @apply text-blue-50 bg-blue-800
 
 .key
   @apply whitespace-pre-line
