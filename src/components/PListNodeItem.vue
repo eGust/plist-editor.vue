@@ -23,7 +23,8 @@
             ref="refInputKey"
             type="text"
             :value="keyName"
-            @keydown.esc.stop="() => stopEditing()"
+            @keydown.enter.stop="() => stopEditing()"
+            @keydown.esc.stop="() => stopEditing({ cancel: true })"
             @change="(ev) => onRenameKey(keyName, ev.currentTarget.value)"
           >
         </DblClickEditor>
@@ -174,14 +175,21 @@ export default defineComponent({
 
     const onRenameKey = (oldKey: string, newKey: string) => {
       if (oldKey === newKey) return;
-      const parentDict = (props.parent as PListDictNode).value;
+
+      const parent = props.parent as PListDictNode;
+      const parentDict = parent.value;
       if (newKey in parentDict) {
         throw new Error(`Key "${newKey}" already exists`);
       }
 
-      const child = parentDict[oldKey];
-      delete parentDict[oldKey];
-      parentDict[newKey] = child;
+      const map = new Map([[oldKey, newKey]]);
+      parent.value = Object.fromEntries(
+        Object.entries(parentDict)
+          .map(([k, v]) => [
+            map.get(k) || k,
+            v,
+          ]),
+      );
     };
 
     return {

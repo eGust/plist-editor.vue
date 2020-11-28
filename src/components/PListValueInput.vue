@@ -126,3 +126,8 @@ export default defineComponent({
   },
 });
 </script>
+
+<style lang="stylus" scoped>
+input
+  @apply px-1 w-full
+</style>

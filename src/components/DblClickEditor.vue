@@ -43,20 +43,27 @@ export default defineComponent({
 
     const isEditing = ref(false);
 
-    const onStopEditing = () => {
-      lastFocusElement?.focus();
-      isEditing.value = false;
+    const onStopEditing = async ({ cancel }: { cancel?: boolean } = {}) => {
+      if (cancel) {
+        isEditing.value = false;
+        await sleep();
+        lastFocusElement?.focus();
+      } else {
+        lastFocusElement?.focus();
+        await sleep();
+        isEditing.value = false;
+      }
     };
 
     watch(refEditor as Ref<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null>, ($editor, $old) => {
       if ($old) {
-        $old.removeEventListener('blur', onStopEditing);
-        $old.removeEventListener('change', onStopEditing);
+        $old.removeEventListener('blur', () => onStopEditing());
+        $old.removeEventListener('change', () => onStopEditing());
       }
 
       if ($editor) {
-        $editor.addEventListener('change', onStopEditing);
-        $editor.addEventListener('blur', onStopEditing);
+        $editor.addEventListener('change', () => onStopEditing());
+        $editor.addEventListener('blur', () => onStopEditing());
       }
     }, { immediate: true });
 

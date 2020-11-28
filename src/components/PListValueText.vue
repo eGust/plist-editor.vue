@@ -8,7 +8,7 @@
     <textarea
       v-show="show"
       ref="refEditor"
-      rows="1"
+      :rows="rows"
       :value="node.value"
       @keydown.esc.stop="() => stopEditing()"
       @change="onChange"
@@ -17,7 +17,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, ref } from 'vue';
+import {
+  computed, defineComponent, PropType, ref,
+} from 'vue';
 
 import DblClickEditor from './DblClickEditor.vue';
 
@@ -40,13 +42,20 @@ export default defineComponent({
   setup(props) {
     const refEditor = ref<HTMLInputElement | null>(null);
 
+    const rows = computed(() => (props.node.value.includes('\n') ? 3 : 1));
+
     const onChange = (ev: Event) => {
       const { value } = ev.currentTarget as HTMLInputElement;
       // eslint-disable-next-line vue/no-mutating-props
       props.node.value = value; // eslint-disable-line no-param-reassign
     };
 
-    return { refEditor, onChange };
+    return { refEditor, rows, onChange };
   },
 });
 </script>
+
+<style lang="stylus" scoped>
+textarea
+  @apply px-1 w-full
+</style>

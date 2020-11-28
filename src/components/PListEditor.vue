@@ -151,12 +151,9 @@ export default defineComponent({
       if (!ev.target) return;
 
       const $target = ev.target as HTMLDivElement;
-      if (!($target.matches('.plist-node-item'))) {
-        console.log('not match', $target, ev.currentTarget);
-        return;
-      }
+      if (!($target.matches('.plist-node-item'))) return;
 
-      switch (ev.key) {
+      switch (ev.code) {
         case 'ArrowUp': {
           getPrevItem($target)?.focus();
           break;
@@ -181,9 +178,17 @@ export default defineComponent({
           }
           break;
         }
-        case 'Tab': {
+        case 'Space': {
+          // edit key
           $target.firstElementChild
             ?.querySelector?.('.key > .dbl-click-editor')
+            ?.dispatchEvent(new Event('dblclick'));
+          break;
+        }
+        case 'Tab': {
+          // edit value
+          $target.firstElementChild
+            ?.querySelector?.('.value > .dbl-click-editor, .value > .boolean.value > .switch')
             ?.dispatchEvent(new Event('dblclick'));
           break;
         }

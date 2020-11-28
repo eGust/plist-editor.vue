@@ -1,7 +1,7 @@
 <template>
   <span class="value boolean">
     <span
-      class="toggler"
+      class="switch"
       @dblclick="onToggle"
     >
       <input
@@ -52,28 +52,31 @@ export default defineComponent({
 .value.boolean
   @apply flex items-center
 
-.toggler
+.switch
   @apply relative cursor-pointer
   width 3em
-  height 1em
+  height 1.5em
 
 .bar
   @apply inline-block bg-gray-400 rounded-full shadow-inner
-  width 2.5em
-  height 1em
+  width 2.6em
+  height 1.5em
 
 .button
-  @apply absolute bg-gray-600 rounded-full shadow inset-y-0 left-0
-  width 1.5em
-  height 1.5em
-  top -0.15em
-  left -0.25em
+  @apply absolute bg-gray-300 rounded-full
+  width 1.2em
+  height 1.2em
+  top 0.15em
+  left 0.1em
   transition all 0.3s ease-in-out
 
 .text
-  margin-left 0.3em
+  @apply ml-1
+
+input:checked ~ .bar
+  @apply bg-green-400
 
 input:checked ~ .button
+  @apply bg-gray-50
   transform translateX(100%)
-  background-color #48bb78
 </style>
