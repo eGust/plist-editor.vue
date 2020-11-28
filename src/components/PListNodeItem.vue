@@ -1,5 +1,5 @@
 <template>
-  <div
+  <section
     class="plist-node-item"
     tabindex="0"
   >
@@ -50,7 +50,7 @@
         v-bind="binds"
       />
     </div>
-  </div>
+  </section>
 </template>
 
 <script lang="ts">

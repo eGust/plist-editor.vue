@@ -1,6 +1,6 @@
 <template>
   <span
-    class="wrap"
+    class="dbl-click-editor"
     :class="{ readonly: !editable }"
     @dblclick="onStartEditing"
   >
@@ -39,9 +39,12 @@ export default defineComponent({
   setup(props) {
     const refEditor = toRef(props, 'editor');
 
+    let lastFocusElement : HTMLDivElement | null = null;
+
     const isEditing = ref(false);
 
     const onStopEditing = () => {
+      lastFocusElement?.focus();
       isEditing.value = false;
     };
 
@@ -61,6 +64,7 @@ export default defineComponent({
       if (!(props.editable && refEditor.value)) return;
 
       isEditing.value = true;
+      lastFocusElement = document.querySelector(':focus');
       await sleep();
 
       refEditor.value.focus();
@@ -77,7 +81,7 @@ export default defineComponent({
 </script>
 
 <style lang="stylus" scoped>
-.wrap
+.dbl-click-editor
   @apply flex flex-row
 
   & > *

@@ -1,12 +1,15 @@
 <template>
   <div class="plist-editor">
-    <div class="row header">
+    <div class="header row">
       <label class="key">Key</label>
       <label class="type">Type</label>
       <label class="value">Value</label>
     </div>
 
-    <div class="items">
+    <div
+      class="items"
+      @keydown="onItemsKeyDown"
+    >
       <PListNodeItem
         v-for="{ key, parent, keyName } in items"
         :key="key"
@@ -15,30 +18,36 @@
       />
     </div>
 
-    <button
-      v-if="download"
-      class="btn"
-      @click="onDownload"
-    >
-      Download
-    </button>
-
-    <div class="hidden">
-      <a
-        ref="refDownload"
-        :href="data.urlConfigPlist"
-        :download="downloadFilename"
+    <div class="footer">
+      <button
+        v-if="download"
+        class="success btn"
+        @click="onDownload"
       >
         Download
-      </a>
+      </button>
+
+      <slot />
+
+      <div class="hidden">
+        <a
+          ref="refDownload"
+          :href="data.urlConfigPlist"
+          :download="downloadFilename"
+        >
+          Download
+        </a>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
 import {
-  computed,
-  defineComponent, PropType, provide, reactive, ref, toRef,
+  defineComponent,
+  provide,
+  computed, reactive, ref, toRef,
+  PropType,
 } from 'vue';
 
 import PListNodeItem from './PListNodeItem.vue';
@@ -46,6 +55,32 @@ import PListNodeItem from './PListNodeItem.vue';
 import { encodePList, PListRootNode } from '/@lib/plist';
 import { sleep } from '/@lib/utils';
 import { PListEditorData } from './types';
+
+const getPrevItem = ($item: HTMLDivElement): HTMLDivElement | undefined => {
+  const $prev = $item.previousElementSibling;
+  if ($prev) {
+    const $children = $prev.querySelectorAll('section:last-of-type');
+    return ($children.length ? $children[$children.length - 1] : $prev) as HTMLDivElement;
+  }
+
+  return $item.parentElement?.closest('.plist-node-item') as HTMLDivElement;
+};
+
+const getNextItem = ($item: HTMLDivElement): HTMLDivElement | undefined => {
+  const $next = $item.querySelector('.children > .plist-node-item') || $item.nextElementSibling;
+  if ($next) return $next as HTMLDivElement;
+
+  for (let $current = $item, $parent = $item; $current; $current = $parent) {
+    $parent = $current.parentElement?.closest('.plist-node-item') as HTMLDivElement;
+    if (!$parent) return undefined;
+
+    const $n = $parent.nextElementSibling;
+    if ($n) {
+      return $n as HTMLDivElement;
+    }
+  }
+  return undefined;
+};
 
 export default defineComponent({
   name: 'PListEditor',
@@ -71,6 +106,8 @@ export default defineComponent({
       editable: props.editable || false,
       expanded: new Map(),
     }));
+
+    const refItems = ref<HTMLDivElement | null>(null);
 
     const refDownload = ref<HTMLAnchorElement | null>(null);
 
@@ -110,11 +147,64 @@ export default defineComponent({
       await sleep(1000);
     };
 
+    const onItemsKeyDown = (ev: KeyboardEvent) => {
+      if (!ev.target) return;
+
+      const $target = ev.target as HTMLDivElement;
+      if (!($target.matches('.plist-node-item'))) {
+        console.log('not match', $target, ev.currentTarget);
+        return;
+      }
+
+      switch (ev.key) {
+        case 'ArrowUp': {
+          getPrevItem($target)?.focus();
+          break;
+        }
+        case 'ArrowDown': {
+          getNextItem($target)?.focus();
+          break;
+        }
+        case 'ArrowLeft': {
+          const $caret = ($target.firstElementChild as HTMLDivElement).querySelector('.down > .caret');
+          if ($caret) {
+            ($caret as HTMLDivElement).click();
+          } else {
+            ($target.parentElement?.closest('.plist-node-item') as HTMLDivElement)?.focus();
+          }
+          break;
+        }
+        case 'ArrowRight': {
+          const $caret = ($target.firstElementChild as HTMLDivElement).querySelector('.right > .caret');
+          if ($caret) {
+            ($caret as HTMLDivElement).click();
+          }
+          break;
+        }
+        case 'Tab': {
+          $target.firstElementChild
+            ?.querySelector?.('.key > .dbl-click-editor')
+            ?.dispatchEvent(new Event('dblclick'));
+          break;
+        }
+        default: {
+          console.debug(ev);
+          return;
+        }
+      }
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+    };
+
     return {
       data,
       items,
       downloadFilename,
+
       refDownload,
+      refItems,
+      onItemsKeyDown,
+
       onDownload,
     };
   },
@@ -128,7 +218,7 @@ export default defineComponent({
     @apply sticky top-0 text-center font-semibold mt-1
 
   .items
-    @apply font-mono text-sm mb-2
+    @apply font-mono text-sm
     .row > span:not(:first-child)
       @apply border-l border-gray-200
     select
