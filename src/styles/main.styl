@@ -1,0 +1,33 @@
+@css {
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+}
+
+.btn
+  @apply px-2 py-1 bg-blue-600 text-white rounded cursor-pointer;
+
+.plist-editor
+  .header
+    @apply sticky top-0 text-center font-semibold mt-1
+  .items
+    @apply font-mono text-sm mb-2
+    .row > span:not(:first-child)
+      @apply border-l border-gray-200
+    select
+      @apply w-full
+
+  .row
+    @apply grid grid-cols-12 border-b border-gray-300
+    & > span, & > label
+      @apply px-2 py-1
+    .type
+      @apply col-span-2 cursor-default
+    .key, .value
+      @apply col-span-5 cursor-default
+  .items .row > .key
+    @apply flex flex-row items-stretch
+    & > *
+      @apply flex-grow-0 flex-shrink-0
+    & > .dictionary
+      @apply flex-auto cursor-text
