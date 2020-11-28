@@ -12,11 +12,14 @@ module.exports = {
     ecmaVersion: 2020,
     sourceType: 'module',
   },
-  ignorePatterns: ['!/.*.js', '!/.*.ts', '*.d.ts'],
+  ignorePatterns: ['!.*.js', '!.*.ts', '*.d.ts'],
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
+    // overrides
     'max-len': ['error', 120],
+
+    // [fixes]
     // https://github.com/typescript-eslint/typescript-eslint/issues/2483#issuecomment-687095358
     'no-shadow': 'off',
     '@typescript-eslint/no-shadow': 'error',
@@ -24,7 +27,6 @@ module.exports = {
     'vue/custom-event-name-casing': 'off',
     // fix path alias `/@lib/`
     'import/no-absolute-path': 'off',
-
     // fix require `.ts` warning which is invalid in ts
     'import/extensions': [
       'error',
@@ -50,7 +52,9 @@ module.exports = {
     {
       files: ['*.js', './*.ts'],
       rules: {
+        // import from `devDependencies`
         'import/no-extraneous-dependencies': 'off',
+        // `require` syntax
         '@typescript-eslint/no-var-requires': 'off',
       },
     },
