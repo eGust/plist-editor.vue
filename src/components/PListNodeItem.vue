@@ -30,7 +30,60 @@
         </DblClickEditor>
       </span>
 
-      <span class="type">{{ node.type }}</span>
+      <span class="type">
+        <span class="text">{{ node.type }}</span>
+        <IconDotsCircle
+          v-if="isEditable"
+          class="icon"
+          @click="onClickMenuIcon"
+        />
+        <div
+          ref="refMenu"
+          :class="{ block: showMenu }"
+          class="menu"
+          tabindex="1"
+        >
+          <div class="py-1">
+            <a
+              v-if="hasChildren"
+              class="menu-item"
+              @click="() => onMenuAction('addChild')"
+            >Add Child</a>
+            <a
+              class="menu-item"
+              @click="() => onMenuAction('insertBefore')"
+            >Insert Before</a>
+            <a
+              class="menu-item"
+              @click="() => onMenuAction('insertAfter')"
+            >Insert After</a>
+          </div>
+          <div class="py-1">
+            <a
+              class="menu-item"
+              @click="() => onMenuAction('removeSelf')"
+            >Delete</a>
+          </div>
+          <div class="py-1">
+            <a
+              class="menu-item"
+              @click="() => onMenuAction('moveToTop')"
+            >Move to Top</a>
+            <a
+              class="menu-item"
+              @click="() => onMenuAction('moveToBottom')"
+            >Move to Bottom</a>
+            <a
+              class="menu-item"
+              @click="() => onMenuAction('moveUp')"
+            >Move Up</a>
+            <a
+              class="menu-item"
+              @click="() => onMenuAction('moveDown')"
+            >Move Down</a>
+          </div>
+        </div>
+      </span>
 
       <span class="value">
         <component
@@ -59,7 +112,11 @@ import {
   defineComponent, computed, PropType, inject, ref,
 } from 'vue';
 
-import { PListDataType, PListNode, PListDictNode } from '/@lib/plist';
+import { VueComponent as IconDotsCircle } from '../icons/dots-circle-horizontal.svg';
+
+import {
+  PListDataType, PListNode, PListDictNode, PListArrayNode,
+} from '/@lib/plist';
 
 import Caret from './Caret.vue';
 import DblClickEditor from './DblClickEditor.vue';
@@ -90,12 +147,24 @@ const NODE_TYPE_EDITORS: Record<PListDataType, PListValueEditor> = {
   [PListDataType.Dictionary]: 'PListValueCount',
 };
 
+enum MenuAction {
+  AddChild = 'addChild',
+  InsertBefore = 'insertBefore',
+  InsertAfter = 'insertAfter',
+  RemoveSelf = 'removeSelf',
+  MoveToTop = 'moveToTop',
+  MoveToBottom = 'moveToBottom',
+  MoveUp = 'moveUp',
+  MoveDown = 'moveDown',
+}
+
 export default defineComponent({
   name: 'PListNodeItem',
   components: {
     Caret,
     DblClickEditor,
     IndentSpace,
+    IconDotsCircle,
     ...VALUE_EDITORS,
   },
   props: {
@@ -115,6 +184,8 @@ export default defineComponent({
 
   setup(props) {
     const refInputKey = ref<HTMLInputElement | null>(null);
+    const refMenu = ref<HTMLDivElement | null>(null);
+    const showMenu = ref(false);
 
     const editor = inject<PListEditorData>('plistEditorData') as PListEditorData;
 
@@ -192,24 +263,141 @@ export default defineComponent({
       );
     };
 
+    const onClickMenuIcon = () => {
+      if (!refMenu.value) return;
+
+      showMenu.value = true;
+      const menu = refMenu.value;
+      setTimeout(() => {
+        menu.focus();
+        showMenu.value = false;
+      }, 0);
+    };
+
+    const actionOnArray = (action: MenuAction) => {
+      refMenu.value?.blur();
+      const parent = props.parent as PListArrayNode;
+      const parentArray = parent.value;
+      const index = props.keyName as number;
+      const item = node.value;
+
+      switch (action) {
+        case MenuAction.RemoveSelf: {
+          parent.value = [...parentArray.slice(0, index), ...parentArray.slice(index + 1)];
+          break;
+        }
+        case MenuAction.MoveToTop: {
+          if (index === 0) return;
+          parent.value = [item, ...parentArray.slice(0, index), ...parentArray.slice(index + 1)];
+          break;
+        }
+        case MenuAction.MoveToBottom: {
+          if (index === parentArray.length - 1) return;
+          parent.value = [...parentArray.slice(0, index), ...parentArray.slice(index + 1), item];
+          break;
+        }
+        case MenuAction.MoveUp: {
+          if (index === 0) return;
+          parent.value = [
+            ...parentArray.slice(0, index - 1),
+            item,
+            ...parentArray.slice(index - 1, index),
+            ...parentArray.slice(index + 1),
+          ];
+          break;
+        }
+        case MenuAction.MoveDown: {
+          if (index === parentArray.length - 1) return;
+          parent.value = [
+            ...parentArray.slice(0, index),
+            ...parentArray.slice(index + 1, index + 2),
+            item,
+            ...parentArray.slice(index + 2),
+          ];
+          break;
+        }
+        default:
+          throw new Error(`Unknown action ${action}`);
+      }
+    };
+
+    const actionOnDictionary = (action: MenuAction) => {
+      refMenu.value?.blur();
+      const parent = props.parent as PListDictNode;
+      const parentDict = parent.value;
+      const key = props.keyName as string;
+      const item = node.value;
+
+      switch (action) {
+        case MenuAction.RemoveSelf: {
+          delete parentDict[key];
+          break;
+        }
+        case MenuAction.MoveToTop: {
+          delete parentDict[key];
+          parent.value = Object.fromEntries(
+            [
+              [key, item],
+              ...Object.entries(parentDict),
+            ],
+          );
+          break;
+        }
+        case MenuAction.MoveToBottom: {
+          delete parentDict[key];
+          parentDict[key] = item;
+          break;
+        }
+        case MenuAction.MoveUp:
+        case MenuAction.MoveDown: {
+          const index = Object.keys(parentDict).indexOf(key) + (action === MenuAction.MoveUp ? -1 : 1);
+          delete parentDict[key];
+          const self = [key, item];
+          const items = Object.entries(parentDict);
+          parent.value = Object.fromEntries(
+            [
+              ...items.slice(0, index),
+              self,
+              ...items.slice(index),
+            ],
+          );
+          break;
+        }
+        default:
+          throw new Error(`Unknown action ${action}`);
+      }
+    };
+
+    const onMenuAction = props.parent.type === PListDataType.Array ? actionOnArray : actionOnDictionary;
+
     return {
       collapsed,
       isEditable: editor.editable,
       isKeyEditable,
       hasChildren,
+      showMenu,
 
       node,
       children,
       editorType,
 
       refInputKey,
+      refMenu,
 
       onRenameKey,
       onToggleCollapsed,
+      onClickMenuIcon,
+      onMenuAction,
     };
   },
 });
 </script>
+
+<style scoped>
+.menu:focus {
+  @apply outline-none;
+}
+</style>
 
 <style lang="stylus">
 .plist-node-item:focus
@@ -225,9 +413,32 @@ export default defineComponent({
   .array
     @apply text-purple-700
     &::before
-      content: '['
+      content '['
       @apply text-gray-300
     &::after
-      content: ']'
+      content ']'
       @apply text-gray-300
+
+.type
+  @apply flex relative
+  .text
+    @apply flex-1
+  svg.icon
+    @apply block text-blue-800 cursor-pointer h-full
+    min-width 1em
+  .menu
+    @apply origin-top-right absolute z-10 min-w-max
+    @apply rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-200
+    top 0.3em
+    right 0.4em
+    width calc(100% - 2em)
+    &:not(.block):not(:focus-within)
+      @apply hidden
+    .menu-item
+      @apply block px-4 py-2 text-sm text-gray-700 cursor-pointer select-none min-w-min
+      &:hover
+        @apply bg-gray-100 text-gray-900
+
+.value .text
+  @apply whitespace-nowrap overflow-ellipsis overflow-x-hidden
 </style>

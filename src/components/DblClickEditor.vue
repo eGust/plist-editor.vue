@@ -12,6 +12,7 @@
     <span
       v-show="!isEditing"
       class="text w-full"
+      :title="text"
     >{{ text }}</span>
   </span>
 </template>
