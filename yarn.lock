@@ -9266,7 +9266,7 @@ svg-tags@^1.0.0:
   resolved "https://registry.yarnpkg.com/svg-tags/-/svg-tags-1.0.0.tgz#58f71cee3bd519b59d4b2a843b6c7de64ac04764"
   integrity sha1-WPcc7jvVGbWdSyqEO2x95krAR2Q=
 
-svgo@^1.0.0:
+svgo@^1.0.0, svgo@^1.3.2:
   version "1.3.2"
   resolved "https://registry.yarnpkg.com/svgo/-/svgo-1.3.2.tgz#b6dc511c063346c9e415b81e43401145b96d4167"
   integrity sha512-yhy/sQYxR5BkC98CY7o31VGsg014AKLEPxdfhora76l36hD9Rdy5NZA/Ocn6yayNPgSamYdtX2rFJdcv07AYVw==
@@ -9870,6 +9870,13 @@ verror@1.10.0:
     assert-plus "^1.0.0"
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
+
+vite-plugin-svg@^0.7.0:
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/vite-plugin-svg/-/vite-plugin-svg-0.7.0.tgz#d793c0e0bf11ec245601e95e6f55c4fe67f22b96"
+  integrity sha512-NaM0JnCvr02Yaz/Res3ZL1sh2u334EUhFI8mjBQH3kIXoDAT3r6eZZv/RgP1eq5HJtXmXU2/7E0uJ3qWEDCcEA==
+  dependencies:
+    svgo "^1.3.2"
 
 vite@^1.0.0-rc.9:
   version "1.0.0-rc.13"
